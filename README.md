@@ -44,6 +44,8 @@ Set-Location backend
 
 The seeder refuses to insert duplicates if `[DEMO]` reports already exist. Demo residents use reserved `example.com` addresses, the sample image is labeled as a demo, and the admin dashboard shows 50 reports per page.
 
+After signing in, the admin workspace opens at `/admin`. Use its sidebar to switch between the full-page report desk and `/admin/analytics`, which summarizes monthly report volume, status breakdown, resolution rate, resident contact availability, and the most reported areas.
+
 ## Production notes
 
 - Set a unique `ADMIN_USERNAME` and strong `ADMIN_PASSWORD` (at least 12 characters). Admin login returns a signed bearer session that expires after eight hours; protected endpoints reject invalid or expired sessions. Serve the admin panel only over HTTPS and restrict its audience at the network or identity-provider layer as appropriate.
