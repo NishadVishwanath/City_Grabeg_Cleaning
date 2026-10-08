@@ -8,6 +8,7 @@ const statusClass = (status) => status.toLowerCase().replaceAll(" ", "-");
 function Icon({ name, size = 20 }) {
   const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true };
   const paths = {
+    search: <><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></>,
     pin: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
     arrow: <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
     camera: <><path d="M14 5H9L7 8H4v12h16V8h-3l-2-3Z" /><circle cx="12" cy="14" r="3.5" /></>,
@@ -166,6 +167,9 @@ function App() {
   const [adminBusy, setAdminBusy] = useState(false);
   const [adminPage, setAdminPage] = useState(1);
   const [activeFilter, setActiveFilter] = useState("All reports");
+  const [reportSearch, setReportSearch] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
+  const [reportSort, setReportSort] = useState("newest");
   const [form, setForm] = useState({ description: "", area: "", reported_at: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), contact_name: "", contact_email: "", contact_phone: "" });
 
   function navigateAdmin(view) {
@@ -232,7 +236,19 @@ function App() {
     inProgress: reports.filter((report) => report.status === "In progress").length,
     resolved: reports.filter((report) => report.status === "Resolved").length,
   }), [reports]);
-  const filteredReports = useMemo(() => reports.filter((report) => activeFilter === "All reports" || report.status === activeFilter), [reports, activeFilter]);
+  const reportAreas = useMemo(() => [...new Set(reports.map((report) => report.area).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [reports]);
+  const filteredReports = useMemo(() => {
+    const query = reportSearch.trim().toLocaleLowerCase();
+    return reports
+      .filter((report) => activeFilter === "All reports" || report.status === activeFilter)
+      .filter((report) => !areaFilter || report.area === areaFilter)
+      .filter((report) => !query || `${report.area} ${report.description}`.toLocaleLowerCase().includes(query))
+      .sort((a, b) => {
+        const difference = Date.parse(a.reported_at) - Date.parse(b.reported_at);
+        return reportSort === "newest" ? -difference : difference;
+      });
+  }, [reports, activeFilter, areaFilter, reportSearch, reportSort]);
+  const hasReportFilters = Boolean(reportSearch || areaFilter || activeFilter !== "All reports");
   const adminPageCount = Math.max(1, Math.ceil(adminReports.length / ADMIN_PAGE_SIZE));
   const visibleAdminReports = adminReports.slice((adminPage - 1) * ADMIN_PAGE_SIZE, adminPage * ADMIN_PAGE_SIZE);
 
@@ -485,11 +501,18 @@ function App() {
               {["All reports", ...statuses].map((filter) => <button key={filter} className={activeFilter === filter ? "active" : ""} onClick={() => setActiveFilter(filter)}>{filter}<span>{filter === "All reports" ? reports.length : reports.filter((report) => report.status === filter).length}</span></button>)}
             </div>
           </div>
+          <div className="report-filter-bar">
+            <label className="report-search"><span className="sr-only">Search reports by area or description</span><Icon name="search" size={16} /><input type="search" value={reportSearch} onChange={(event) => setReportSearch(event.target.value)} placeholder="Search area or description" /></label>
+            <label className="report-filter-select"><span className="sr-only">Filter reports by area</span><Icon name="pin" size={16} /><select value={areaFilter} onChange={(event) => setAreaFilter(event.target.value)}><option value="">All areas</option>{reportAreas.map((area) => <option key={area} value={area}>{area}</option>)}</select></label>
+            <label className="report-filter-select sort-select"><span className="sr-only">Sort reports by date</span><Icon name="clock" size={16} /><select value={reportSort} onChange={(event) => setReportSort(event.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+            <span className="report-result-count">{filteredReports.length} {filteredReports.length === 1 ? "report" : "reports"}</span>
+            {(reportSearch || areaFilter || reportSort !== "newest" || activeFilter !== "All reports") && <button className="clear-report-filters" onClick={() => { setReportSearch(""); setAreaFilter(""); setReportSort("newest"); setActiveFilter("All reports"); }}>Clear filters</button>}
+          </div>
           {error && <div className="inline-alert" role="alert">{error}<button onClick={loadReports}>Try again</button></div>}
           <div className="report-grid">
             {loading && <div className="empty-state">Finding community reports…</div>}
             {!loading && filteredReports.map((report) => <ReportCard key={report.id} report={report} />)}
-            {!loading && !filteredReports.length && <div className="empty-state"><span className="empty-icon"><Icon name="leaf" size={26} /></span><b>Nothing to show just yet.</b><span>{reports.length ? "Try another status filter." : "Be the first to report an issue in your community."}</span><a href="#report">Make the first report <Icon name="arrow" size={15} /></a></div>}
+            {!loading && !filteredReports.length && <div className="empty-state"><span className="empty-icon"><Icon name="leaf" size={26} /></span><b>{reports.length && hasReportFilters ? "No reports match these filters." : "Nothing to show just yet."}</b><span>{reports.length ? "Try adjusting or clearing your filters." : "Be the first to report an issue in your community."}</span>{reports.length && hasReportFilters ? <button className="clear-report-filters" onClick={() => { setReportSearch(""); setAreaFilter(""); setReportSort("newest"); setActiveFilter("All reports"); }}>Clear filters</button> : <a href="#report">Make the first report <Icon name="arrow" size={15} /></a>}</div>}
           </div>
         </section>
       </main>
