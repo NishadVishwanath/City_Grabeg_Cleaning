@@ -408,7 +408,7 @@ function App() {
       /> : <>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="CleanCity home"><span className="brand-icon"><Icon name="leaf" size={21} /></span><span>clean<span className="brand-light">city</span><small>YOUR CITY. YOUR SAY.</small></span></a>
-        <nav className="desktop-nav"><a href="#how-it-works">How it works</a><a href="#reports">Community reports</a></nav>
+        <nav className="desktop-nav"><a href="#how-it-works">How it works</a><a href="#reports">What's happening near you</a></nav>
         <button className="admin-link" onClick={openAdmin}><Icon name="lock" size={16} /> Admin</button>
       </header>
 
