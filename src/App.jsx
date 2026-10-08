@@ -160,6 +160,7 @@ function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminToken, setAdminToken] = useState("");
   const [adminView, setAdminView] = useState("public");
+  const [publicPage, setPublicPage] = useState(window.location.pathname === "/reports" ? "reports" : "home");
   const [adminUsername, setAdminUsername] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminReports, setAdminReports] = useState([]);
@@ -176,8 +177,21 @@ function App() {
     const path = view === "public" ? "/" : view === "analytics" ? "/admin/analytics" : "/admin";
     if (window.location.pathname !== path) window.history.pushState({}, "", path);
     setAdminView(view);
+    if (view === "public") setPublicPage("home");
     setAdminOpen(false);
     window.scrollTo(0, 0);
+  }
+
+  function navigatePublic(path) {
+    const [pathname, hash = ""] = path.split("#");
+    const nextPath = pathname || "/";
+    const nextUrl = `${nextPath}${hash ? `#${hash}` : ""}`;
+    if (`${window.location.pathname}${window.location.hash}` !== nextUrl) window.history.pushState({}, "", nextUrl);
+    setPublicPage(nextPath === "/reports" ? "reports" : "home");
+    setAdminView("public");
+    setAdminOpen(false);
+    window.scrollTo(0, 0);
+    if (hash) window.requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView());
   }
 
   const loadReports = useCallback(async () => {
@@ -198,6 +212,7 @@ function App() {
   useEffect(() => {
     const token = sessionStorage.getItem("cleancity_admin_token");
     const path = window.location.pathname;
+    setPublicPage(path === "/reports" ? "reports" : "home");
     if (token && path.startsWith("/admin")) {
       setAdminToken(token);
       setAdminView(path === "/admin/analytics" ? "analytics" : "dashboard");
@@ -219,6 +234,7 @@ function App() {
       } else {
         setAdminView("public");
         setAdminOpen(false);
+        setPublicPage(nextPath === "/reports" ? "reports" : "home");
       }
     };
     window.addEventListener("popstate", syncRoute);
@@ -407,12 +423,17 @@ function App() {
         onDelete={deleteReport}
       /> : <>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="CleanCity home"><span className="brand-icon"><Icon name="leaf" size={21} /></span><span>clean<span className="brand-light">city</span><small>YOUR CITY. YOUR SAY.</small></span></a>
-        <nav className="desktop-nav"><a href="#how-it-works">How it works</a><a href="#reports">What's happening near you</a></nav>
+        <a className="brand" href="/" onClick={(event) => { event.preventDefault(); navigatePublic("/"); }} aria-label="CleanCity home"><span className="brand-icon"><Icon name="leaf" size={21} /></span><span>clean<span className="brand-light">city</span><small>YOUR CITY. YOUR SAY.</small></span></a>
+        <nav className="desktop-nav" aria-label="Main navigation">
+          <a href="/" onClick={(event) => { event.preventDefault(); navigatePublic("/"); }}>Home</a>
+          <a href="/#how-it-works" onClick={(event) => { event.preventDefault(); navigatePublic("/#how-it-works"); }}>How it works</a>
+          <a className={publicPage === "reports" ? "current" : ""} href="/reports" aria-current={publicPage === "reports" ? "page" : undefined} onClick={(event) => { event.preventDefault(); navigatePublic("/reports"); }}>What's happening near you</a>
+        </nav>
         <button className="admin-link" onClick={openAdmin}><Icon name="lock" size={16} /> Admin</button>
       </header>
 
       <main id="top">
+        {publicPage === "home" && <>
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow"><span />A CLEANER CITY STARTS WITH US</div>
@@ -493,8 +514,9 @@ function App() {
             <p className="form-footnote">By submitting, you're helping make our shared spaces better.</p>
           </form>
         </section>
+        </>}
 
-        <section className="reports-section" id="reports">
+        {publicPage === "reports" && <section className="reports-section reports-page" id="reports">
           <div className="reports-heading">
             <div><div className="eyebrow"><span />AROUND YOUR NEIGHBORHOOD</div><h2>What's happening <em>near you.</em></h2><p>Every report is a step toward a cleaner block.</p></div>
             <div className="filter-tabs" role="group" aria-label="Filter reports">
@@ -514,10 +536,10 @@ function App() {
             {!loading && filteredReports.map((report) => <ReportCard key={report.id} report={report} />)}
             {!loading && !filteredReports.length && <div className="empty-state"><span className="empty-icon"><Icon name="leaf" size={26} /></span><b>{reports.length && hasReportFilters ? "No reports match these filters." : "Nothing to show just yet."}</b><span>{reports.length ? "Try adjusting or clearing your filters." : "Be the first to report an issue in your community."}</span>{reports.length && hasReportFilters ? <button className="clear-report-filters" onClick={() => { setReportSearch(""); setAreaFilter(""); setReportSort("newest"); setActiveFilter("All reports"); }}>Clear filters</button> : <a href="#report">Make the first report <Icon name="arrow" size={15} /></a>}</div>}
           </div>
-        </section>
+        </section>}
       </main>
 
-      <footer className="footer"><a className="brand footer-brand" href="#top"><span className="brand-icon"><Icon name="leaf" size={19} /></span><span>clean<span className="brand-light">city</span><small>YOUR CITY. YOUR SAY.</small></span></a><span>A little care goes a long way.</span><a href="#top">BACK TO TOP ↑</a></footer>
+      <footer className="footer"><a className="brand footer-brand" href="/" onClick={(event) => { event.preventDefault(); navigatePublic("/"); }}><span className="brand-icon"><Icon name="leaf" size={19} /></span><span>clean<span className="brand-light">city</span><small>YOUR CITY. YOUR SAY.</small></span></a><span>A little care goes a long way.</span><a href="#top" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>BACK TO TOP ↑</a></footer>
       </>}
 
       {adminOpen && !adminToken && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setAdminOpen(false); }}><section className="admin-panel" role="dialog" aria-modal="true" aria-labelledby="admin-title">
