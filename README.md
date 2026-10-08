@@ -33,6 +33,17 @@ A community garbage-reporting app with a React/Vite frontend, FastAPI backend, a
 
 5. Open the Vite URL printed in the terminal. The Vite development server proxies `/api` and `/uploads` to the local API. Sign in to the Admin panel with the `ADMIN_USERNAME` and `ADMIN_PASSWORD` configured in `backend/.env`.
 
+### Seed local demo reports
+
+With the backend virtual environment installed and the SQL Server settings in `backend/.env` configured, run this from the repository root to add 2,000 clearly marked sample reports:
+
+```powershell
+Set-Location backend
+.\.venv\Scripts\python.exe seed_demo.py --count 2000
+```
+
+The seeder refuses to insert duplicates if `[DEMO]` reports already exist. Demo residents use reserved `example.com` addresses, the sample image is labeled as a demo, and the admin dashboard shows 50 reports per page.
+
 ## Production notes
 
 - Set a unique `ADMIN_USERNAME` and strong `ADMIN_PASSWORD` (at least 12 characters). Admin login returns a signed bearer session that expires after eight hours; protected endpoints reject invalid or expired sessions. Serve the admin panel only over HTTPS and restrict its audience at the network or identity-provider layer as appropriate.

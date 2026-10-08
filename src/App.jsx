@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API = "/api";
 const statuses = ["Reported", "In progress", "Resolved"];
+const ADMIN_PAGE_SIZE = 50;
 const statusClass = (status) => status.toLowerCase().replaceAll(" ", "-");
 
 function Icon({ name, size = 20 }) {
@@ -59,6 +60,7 @@ function App() {
   const [adminReports, setAdminReports] = useState([]);
   const [adminError, setAdminError] = useState("");
   const [adminBusy, setAdminBusy] = useState(false);
+  const [adminPage, setAdminPage] = useState(1);
   const [activeFilter, setActiveFilter] = useState("All reports");
   const [form, setForm] = useState({ description: "", area: "", reported_at: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), contact_name: "", contact_email: "", contact_phone: "" });
 
@@ -90,6 +92,8 @@ function App() {
     resolved: reports.filter((report) => report.status === "Resolved").length,
   }), [reports]);
   const filteredReports = useMemo(() => reports.filter((report) => activeFilter === "All reports" || report.status === activeFilter), [reports, activeFilter]);
+  const adminPageCount = Math.max(1, Math.ceil(adminReports.length / ADMIN_PAGE_SIZE));
+  const visibleAdminReports = adminReports.slice((adminPage - 1) * ADMIN_PAGE_SIZE, adminPage * ADMIN_PAGE_SIZE);
 
   function updateForm(event) {
     const { name, value } = event.target;
@@ -140,6 +144,7 @@ function App() {
       setAdminToken(token);
       sessionStorage.setItem("cleancity_admin_token", token);
       setAdminReports(body);
+      setAdminPage(1);
     } catch (err) {
       setAdminError(err.message || "Couldn't load the admin dashboard.");
     } finally {
@@ -335,13 +340,14 @@ function App() {
           <div className="admin-summary"><span><b>{adminReports.length}</b> total reports</span><span><b>{adminReports.filter((r) => r.status === "Reported").length}</b> need attention</span></div>
           {adminBusy && <div className="empty-state">Loading reports…</div>}
           {!adminBusy && !adminReports.length && <div className="empty-state admin-empty">No reports to manage yet.</div>}
-          <div className="admin-list">{adminReports.map((report) => <article className="admin-report" key={report.id}>
+          <div className="admin-list">{visibleAdminReports.map((report) => <article className="admin-report" key={report.id}>
             {report.image_url && <img src={report.image_url} alt="" />}
             <div className="admin-report-info"><div className="admin-report-heading"><b>{report.area}</b><span>{formatDate(report.reported_at)}</span></div><p>{report.description}</p>
               <div className="admin-contact"><span><b>Reported by</b> {report.contact_name || "Anonymous"}</span><span><b>Email</b> {report.contact_email || "—"}</span><span><b>Phone</b> {report.contact_phone || "—"}</span></div>
               <div className="admin-actions"><label className="sr-only" htmlFor={`status-${report.id}`}>Status for {report.area}</label><select id={`status-${report.id}`} value={report.status} onChange={(event) => changeStatus(report.id, event.target.value)}>{statuses.map((status) => <option key={status}>{status}</option>)}</select><button onClick={() => deleteReport(report.id)} aria-label={`Delete report from ${report.area}`}><Icon name="trash" size={16} /> Delete report</button></div>
             </div>
           </article>)}</div>
+          {!adminBusy && adminReports.length > ADMIN_PAGE_SIZE && <div className="admin-pagination"><span>Showing {(adminPage - 1) * ADMIN_PAGE_SIZE + 1}–{Math.min(adminPage * ADMIN_PAGE_SIZE, adminReports.length)} of {adminReports.length} reports</span><div><button disabled={adminPage === 1} onClick={() => setAdminPage((page) => page - 1)}>Previous</button><b>{adminPage} / {adminPageCount}</b><button disabled={adminPage === adminPageCount} onClick={() => setAdminPage((page) => page + 1)}>Next</button></div></div>}
         </div>}
       </section></div>}
     </>

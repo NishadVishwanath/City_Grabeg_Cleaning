@@ -263,7 +263,7 @@ def list_admin_reports() -> list[dict]:
     with closing(get_connection()) as connection:
         rows = connection.cursor().execute(
             """
-            SELECT TOP (500) Id, Description, Area, ReportedAt, ImageFilename, Status, CreatedAt,
+            SELECT TOP (10000) Id, Description, Area, ReportedAt, ImageFilename, Status, CreatedAt,
                 ContactName, ContactEmail, ContactPhone
             FROM dbo.GarbageReports
             ORDER BY CreatedAt DESC
@@ -305,4 +305,10 @@ def delete_report(report_id: uuid.UUID) -> None:
         connection.commit()
     filename = row.ImageFilename
     if re.fullmatch(r"[0-9a-f]{32}\.(jpg|png|webp)", filename):
-        (UPLOAD_DIR / filename).unlink(missing_ok=True)
+        with closing(get_connection()) as connection:
+            remaining = connection.cursor().execute(
+                "SELECT COUNT(*) FROM dbo.GarbageReports WHERE ImageFilename = ?",
+                filename,
+            ).fetchone()[0]
+        if remaining == 0:
+            (UPLOAD_DIR / filename).unlink(missing_ok=True)
